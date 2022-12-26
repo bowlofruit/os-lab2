@@ -39,9 +39,9 @@ impl Screen
     {
         return Screen
         {
-            background_color: (COLOR_BLACK << 4) | background_color,
+            background_color,
             buffer: BUF_ADDR as *mut u8,
-            color: (COLOR_BLACK << 4) | color,
+            color,
             align,
             cursor_row: 0,
             cursor_col: 0,
@@ -55,8 +55,8 @@ impl Screen
             {
             *self.buffer.offset(offset as isize * 2) = char.char_byte;
             *self.buffer.offset(offset as isize * 2 + 1) = char.color_byte;
-        }
 
+    }
         self.cursor_write += 1;
     }
 
@@ -68,31 +68,6 @@ impl Screen
                 char_byte: *self.buffer.offset(offset as isize * 2),
                 color_byte: *self.buffer.offset(offset as isize * 2 + 1)
             }
-        }
-    }
-
-    pub fn print(&mut self, s: &str)
-    {
-        self.add_text(s.as_bytes());
-        self.cursor_write = 0;
-        for row in self.state
-        {
-            let align = self.calc_align(&row);
-            for i in 0..align
-            {
-                self.write_char(
-                    self.cursor_write, AsciiChar{char_byte : b' ', color_byte: self.color}
-                );
-            }
-            for c in row {
-                if c == b'\0' {
-                    break;
-                }
-                self.write_char(
-                    self.cursor_write, AsciiChar{char_byte : c, color_byte: self.color}
-                );
-            }
-            self.cursor_write += BUF_WIDTH - (self.cursor_write % BUF_WIDTH);
         }
     }
 
@@ -126,6 +101,7 @@ impl Screen
         }
         self.cursor_col -= 1;
     }
+
     pub fn calc_align(&self, row: &[u8]) -> u32
     {
         let mut len = 0;
@@ -145,6 +121,40 @@ impl Screen
             Alignment::Center => (BUF_WIDTH - len) / 2
         }
     }
+
+    pub fn print(&mut self, s: &str)
+    {
+        self.add_text(s.as_bytes());
+        self.cursor_write = 0;
+        for row in self.state
+        {
+            let align = self.calc_align(&row);
+            for i in 0..align
+            {
+                self.write_char(
+                    self.cursor_write, AsciiChar{char_byte : 219, color_byte: self.background_color}
+                );
+            }
+            for i in row {
+                if i == b'\0' {
+                    for i in 0..align-1
+                    {
+                        self.write_char(
+                            self.cursor_write, AsciiChar{char_byte : 219, color_byte: self.background_color}
+                        );
+                    }
+                    break;
+                }
+                self.write_char(
+                    self.cursor_write, AsciiChar{char_byte : i, color_byte: self.color}
+                );
+            }
+            self.cursor_write += BUF_WIDTH - (self.cursor_write % BUF_WIDTH);
+        }
+    }
+
+
+
 }
 
 #[repr(u8)]
